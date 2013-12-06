@@ -41,7 +41,7 @@ namespace TubesJarkom
 		         /* Balikin byte[], kirim langsung semuanya */
 		         StreamReader reader = new StreamReader(File.Open(BASEPATH + fileName,FileMode.Open));
 		         string retVal = reader.ReadLine() + LINE_SEPARATOR + reader.ReadLine() + LINE_SEPARATOR + reader.ReadLine() + "\r\n\r\n";
-
+			 Console.WriteLine(retVal);
 		         // Close Reader
 		         reader.Close();
 
@@ -69,6 +69,7 @@ namespace TubesJarkom
 		         for (int i = 0; i < numRows; i++)
 		         {
 		             retVal.Add(Encoding.UTF8.GetBytes(reader.ReadLine() + LINE_SEPARATOR));
+			     //Console.WriteLine(retVal[i]);
 		         }
 
 		         // Add Trailer

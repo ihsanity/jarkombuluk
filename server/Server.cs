@@ -77,7 +77,7 @@ namespace TubesJarkom
 				Console.WriteLine("[DEBUG] Ini dihandle oleh thread ID {0}",ID);
 				receive_byte_array = listener.Receive(ref groupEP);
 				received_data = getData(receive_byte_array);
-
+				Console.WriteLine(received_data);
 				//Handle perintah2
 				if (received_data.Equals("HALO")) {
 					Console.WriteLine("HALO MATAMU");
@@ -99,15 +99,17 @@ namespace TubesJarkom
 				{
 					char[] pembatas = {' '};
 					string[] words = received_data.Split(pembatas);
-
+					
 					List<byte[]> bufferList;
            	 	bufferList = JarkomVideoLoader.GET(words[1]);
 					if (bufferList == null) sendMessage("Error, file tidak ditemukan");
 					else
 					{
-		         	for (int i = 0; i < bufferList.Count; i++)
-		         	{
-		             	sendMessage(bufferList[i]);
+						Console.WriteLine(bufferList.Count);
+		         		for (int i = 0; i < bufferList.Count; i++)
+		         		{
+							Console.WriteLine(System.Text.Encoding.ASCII.GetString(bufferList[i]));
+		             		sendMessage(bufferList[i]);
 		         	}
 					}
 				}

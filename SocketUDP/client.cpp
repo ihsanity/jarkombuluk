@@ -19,8 +19,49 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <string>
+#include <vector>
+#include <sstream>
 using namespace std;
+
+vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+
+vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
+}
+
+string hapusLineSeparator(string s){
+	string s2 = "";
+	for (int i=0;i<s.length();i++){
+		if (s[i] == '\r' || s[i] == '\n')
+			break;
+		s2 = s2 + s[i]; 
+	}
+	return s2;
+}
+
+string convertGaris(string s){
+	string s2 = "";
+	for (int i=0;i<s.length();i++){
+		if (s[i] == 'O'){
+			s2 = s2 + ' ';	
+		}
+		else {
+			s2 = s2 + s[i];
+		}
+	}
+	return s2;
+}
 
 int main()
 {
@@ -61,24 +102,163 @@ int main()
    while (1)
    {
     	cout<<"Tuliskan sesuatu lalu tekan enter (q / Q untuk keluar):";
-    	cin>>send_data; //send_data merupakan array of char dengan buffer 1024 karakter
+		string strr;    	
+		//getline(cin,strr); //send_data merupakan array of char dengan buffer 1024 karakter
+		//send_data=strr.c_str();
+		gets(send_data);
+		string sendDataStr = send_data;
+		vector<string> v = split(send_data,' ');
+		int width, height, framecount;
+		if (v[0] != "GET" && v[0] != "RANDOM" && v[0] != "QUIT"){
+			// Send whatever request
+			sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
 
-		//break apabila ada "q" atau "Q"
-    	if ((strcmp(send_data , "q") == 0) || strcmp(send_data , "Q") == 0) break;
-		else
-			//sendto, method yang digunakan untuk mengirimkan paket UDP
-			//berisikan variabel informasi paket, server tujuan yang telah didefinisikan diatas
-    		sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-
-	//recvfrom merupakan metode menerima data dari sendTo client.cpp, menerima 1024 karakter buffer	
-	bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
-	recv_data[bytes_read] = '\0'; //karakter null
-
-	//inet_ntoa konversi dari pengirim paket ke IP Address, nthos konversi dari pengirim paket ke Port
-	cout<<"("<<(inet_ntoa(client_addr.sin_addr))<<","<<ntohs(client_addr.sin_port)<<") :"; //di print saja
-	cout<<recv_data<<endl; //data yang diterima
-	fflush(stdout); //ini menjadi wajib pada socket UNIX C, mengapa? coba aja hapus kalo berani :v
-	bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			// Get response of whatever request
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			recv_data[bytes_read] = '\0'; //karakter null
+			string response = recv_data;
+			cout << response << endl;
+			fflush(stdout);
+			// Trailer Eater
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+		}
+		else if (v[0] == "GET"){
+			// Send LEN request 
+			string lenCommand = "LEN " + v[1];
+			sendto(sock, lenCommand.c_str(), lenCommand.length(), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+			
+			// Get response of LEN request
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			recv_data[bytes_read] = '\0'; //karakter null
+			string lenResponse = recv_data;
+			bool start = true;
+			int counter = 0;
+			width = 0;
+			height = 0;
+			framecount = 0;
+			for (int i=0;i<lenResponse.length();i++){
+				if (lenResponse[i] >= '0' && lenResponse[i] <= '9'){
+					start = false;
+					if (counter == 0){
+						width*=10;
+						width+=(lenResponse[i]-'0');
+					}
+					else if (counter == 1){
+						height*=10;
+						height+=(lenResponse[i]-'0');
+					}
+					else if (counter == 2){
+						framecount*=10;
+						framecount+=(lenResponse[i]-'0');
+					}
+				}
+				else {
+					if (!start){
+						counter++;
+					}
+					start = true;
+				}
+			}
+			// Trailer Eater
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			
+			// Send GET Request
+			lenCommand = "GET " + v[1];
+			sendto(sock, lenCommand.c_str(), lenCommand.length(), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+			system("clear");
+			// Get response of GET Request
+			for (int i=0;i<framecount;i++){
+				for (int j=0;j<height;j++){
+					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+					recv_data[bytes_read] = '\0'; //karakter null
+					string getResponse = recv_data;
+					getResponse = hapusLineSeparator(getResponse);
+					cout << convertGaris(getResponse) << endl;
+					// Trailer Eater
+					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				}
+				fflush(stdout);
+				usleep(500 * 1000);
+				system("clear");
+			}
+			// Trailer Eater
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+		}
+		else if (v[0] == "RANDOM"){
+			// Send RANDOM request
+			sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+			
+			// Get METADATA
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			recv_data[bytes_read] = '\0'; //karakter null
+			string response = recv_data;
+			bool start = true;
+			int counter = 0;
+			width = 0;
+			height = 0;
+			framecount = 0;
+			for (int i=0;i<response.length();i++){
+				if (response[i] >= '0' && response[i] <= '9'){
+					start = false;
+					if (counter == 0){
+						width*=10;
+						width+=(response[i]-'0');
+					}
+					else if (counter == 1){
+						height*=10;
+						height+=(response[i]-'0');
+					}
+					else if (counter == 2){
+						framecount*=10;
+						framecount+=(response[i]-'0');
+					}
+				}
+				else {
+					if (!start){
+						counter++;
+					}
+					start = true;
+				}
+			}
+			// Trailer Eater
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			
+			system("clear");
+			// Get response of request
+			for (int i=0;i<framecount;i++){
+				for (int j=0;j<height;j++){
+					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+					recv_data[bytes_read] = '\0'; //karakter null
+					string getResponse = recv_data;
+					getResponse = hapusLineSeparator(getResponse);
+					cout << convertGaris(getResponse) << endl;
+					// Trailer Eater
+					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				}
+				fflush(stdout);
+				usleep(500 * 1000);
+				system("clear");
+			}
+			// Trailer Eater
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+		}
+		else if (v[0] == "QUIT"){
+			// Send quit request
+			sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+			
+			// Get response
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			recv_data[bytes_read] = '\0';
+			string response = recv_data;
+			cout << response << endl;
+			sleep(1);
+			//Trailer Eater
+			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			break;
+		}
+		
 	
    }
 	return 0;
