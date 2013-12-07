@@ -65,9 +65,11 @@ string convertGaris(string s){
 
 int main()
 {
+	bool halo = false;
 	int sock;
 	struct hostent *host;
 	char send_data[1024];
+	char exitkode[4];
 	int addr_len, bytes_read;
 	char recv_data[1024];
 	struct sockaddr_in server_addr , client_addr;
@@ -101,7 +103,7 @@ int main()
 
    while (1)
    {
-    	cout<<"Tuliskan sesuatu lalu tekan enter (q / Q untuk keluar):";
+    	cout<<">> ";
 		string strr;    	
 		//getline(cin,strr); //send_data merupakan array of char dengan buffer 1024 karakter
 		//send_data=strr.c_str();
@@ -110,19 +112,46 @@ int main()
 		vector<string> v = split(send_data,' ');
 		int width, height, framecount;
 		if (v[0] != "GET" && v[0] != "RANDOM" && v[0] != "QUIT"){
-			// Send whatever request
-			sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+			if (v[0] != "HALO" && v[0] != "LIST" && v[0] != "LEN" && halo) {
+				// Send whatever request
+				sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
+				
+				// Get response of whatever request
+				bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				recv_data[bytes_read] = '\0'; //karakter null
+				string response = recv_data;
+				cout << response << endl;
+				fflush(stdout);
+				//Trailer Eater
+				bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				
+				bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				recv_data[bytes_read] = '\0'; //karakter null
+				response = recv_data;
+				cout << response << endl;
+				fflush(stdout);
+				//Trailer Eater
+				bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+								
+			}
+			else {
+				if (v[0] == "HALO" || halo) {
+					halo = true;
+					// Send whatever request
+					sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
 
-			// Get response of whatever request
-			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
-			recv_data[bytes_read] = '\0'; //karakter null
-			string response = recv_data;
-			cout << response << endl;
-			fflush(stdout);
-			// Trailer Eater
-			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+					// Get response of whatever request
+					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+					recv_data[bytes_read] = '\0'; //karakter null
+					string response = recv_data;
+					cout << response << endl;
+					fflush(stdout);
+					// Trailer Eater
+					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				}
+			}
 		}
-		else if (v[0] == "GET"){
+		else if (v[0] == "GET" && halo){
 			// Send LEN request 
 			string lenCommand = "LEN " + v[1];
 			sendto(sock, lenCommand.c_str(), lenCommand.length(), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
@@ -162,30 +191,38 @@ int main()
 			// Trailer Eater
 			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
 			
+			while (1) {
 			// Send GET Request
 			lenCommand = "GET " + v[1];
 			sendto(sock, lenCommand.c_str(), lenCommand.length(), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
 			system("clear");
 			// Get response of GET Request
-			for (int i=0;i<framecount;i++){
-				for (int j=0;j<height;j++){
-					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
-					recv_data[bytes_read] = '\0'; //karakter null
-					string getResponse = recv_data;
-					getResponse = hapusLineSeparator(getResponse);
-					cout << convertGaris(getResponse) << endl;
-					// Trailer Eater
-					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+			
+				for (int i=0;i<framecount;i++){
+					for (int j=0;j<height;j++){
+						bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+						recv_data[bytes_read] = '\0'; //karakter null
+						string getResponse = recv_data;
+						getResponse = hapusLineSeparator(getResponse);
+						cout << convertGaris(getResponse) << endl;
+						// Trailer Eater
+						bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+					}
+					fflush(stdout);
+					usleep(500 * 1000);
+					system("clear");
 				}
-				fflush(stdout);
-				usleep(500 * 1000);
-				system("clear");
+						bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+						bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				
 			}
 			// Trailer Eater
 			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
 			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
 		}
-		else if (v[0] == "RANDOM"){
+		else if (v[0] == "RANDOM" && halo){
+			while (1) {
+			
 			// Send RANDOM request
 			sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
 			
@@ -226,25 +263,28 @@ int main()
 			
 			system("clear");
 			// Get response of request
-			for (int i=0;i<framecount;i++){
-				for (int j=0;j<height;j++){
-					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
-					recv_data[bytes_read] = '\0'; //karakter null
-					string getResponse = recv_data;
-					getResponse = hapusLineSeparator(getResponse);
-					cout << convertGaris(getResponse) << endl;
-					// Trailer Eater
-					bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				for (int i=0;i<framecount;i++){
+					for (int j=0;j<height;j++){
+						bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+						recv_data[bytes_read] = '\0'; //karakter null
+						string getResponse = recv_data;
+						getResponse = hapusLineSeparator(getResponse);
+						cout << convertGaris(getResponse) << endl;
+						// Trailer Eater
+						bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+					}
+					fflush(stdout);
+					usleep(500 * 1000);
+					system("clear");
 				}
-				fflush(stdout);
-				usleep(500 * 1000);
-				system("clear");
+				bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
+				bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
 			}
 			// Trailer Eater
 			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
 			bytes_read = recvfrom(sock,recv_data,1024,0,(struct sockaddr *)&client_addr, &addr_len);
 		}
-		else if (v[0] == "QUIT"){
+		else if (v[0] == "QUIT" && halo){
 			// Send quit request
 			sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
 			
